@@ -7,7 +7,7 @@ import random
 import math
 
 # Set your GitHub API key as an environment variable for security
-GITHUB_API_KEY = "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"
+
 
 db = SqliteDatabase("cve.sqlite")
 
