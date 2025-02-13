@@ -1,13 +1,18 @@
-import os
+'''
+Description: Editor's info at the top of the file
+Author: p1ay8y3ar
+Date: 2021-04-01 23:53:55
+LastEditor: p1ay8y3ar
+LastEditTime: 2021-04-15 00:13:48
+Email: p1ay8y3ar@gmail.com
+'''
+
 import requests
 from peewee import *
 from datetime import datetime
 import time
 import random
 import math
-
-# Set your GitHub API key as an environment variable for security
-GITHUB_API_KEY = "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"
 
 db = SqliteDatabase("cve.sqlite")
 
@@ -40,52 +45,29 @@ def write_file(new_contents):
 
 
 def craw_all():
-    # This function crawls all CVE-related repositories from 2017 to 2025
+    # This function crawls all CVE-related repositories from 1999 to 2025
     api = "https://api.github.com/search/repositories?q=CVE-{}&sort=updated&per_page=100&page={}"
     item_list = []
-    for i in range(2017, 2026, 1):  # Updated range to 2025
+    for i in range(2015, 2026, 1):  # Updated range to 2025
         try:
-            headers = {"Authorization": f"token {GITHUB_API_KEY}"}
-            reqtem = requests.get(api.format(i, 1), headers=headers)
-            
-            if reqtem.status_code != 200:
-                print(f"Request failed with status code {reqtem.status_code}: {reqtem.text}")
-                continue
-
-            data = reqtem.json()
-            
-            if 'total_count' not in data:
-                print(f"Missing 'total_count' field in the response: {data}")
-                continue
-
-            total_count = data["total_count"]
-            print(f"Year: {i}, Total: {total_count}")
+            reqtem = requests.get(api.format(i, 1)).json()
+            total_count = reqtem["total_count"]
+            print("Year: {}, Total: {}".format(i, total_count))  # Translated to English
             for_count = math.ceil(total_count / 100) + 1
             time.sleep(random.randint(3, 15))
         except Exception as e:
-            print("Error occurred while fetching count", e)
+            print("Error occurred while fetching count", e)  # Translated to English
             continue
 
         for j in range(1, for_count, 1):
             try:
-                req = requests.get(api.format(i, j), headers=headers)
-                
-                if req.status_code != 200:
-                    print(f"Request failed with status code {req.status_code}: {req.text}")
-                    continue
-
-                data = req.json()
-                
-                if 'items' not in data:
-                    print(f"Missing 'items' field in the response: {data}")
-                    continue
-
-                items = data["items"]
+                req = requests.get(api.format(i, j)).json()
+                items = req["items"]
                 item_list.extend(items)
-                print(f"Year: {i}, Round: {j}, Fetched: {len(items)}")
+                print("Year: {}, Round: {}, Fetched: {}".format(i, j, len(items)))  # Translated to English
                 time.sleep(random.randint(3, 15))
             except Exception as e:
-                print("Network error occurred", e)
+                print("Network error occurred", e)  # Translated to English
                 continue
 
     return item_list
@@ -94,23 +76,11 @@ def craw_all():
 def get_info(year):
     # Used for monitoring
     try:
-        api = f"https://api.github.com/search/repositories?q=CVE-{year}&sort=updated"
-        headers = {"Authorization": f"token {GITHUB_API_KEY}"}
-        req = requests.get(api, headers=headers)
-        
-        # Check if the request was successful
-        if req.status_code != 200:
-            print(f"Request failed with status code {req.status_code}: {req.text}")
-            return None
-        
-        data = req.json()
-        
-        # Check if 'items' is present in the response
-        if 'items' not in data:
-            print(f"Missing 'items' field in the response: {data}")
-            return None
-        
-        items = data["items"]
+        api = "https://api.github.com/search/repositories?q=CVE-{}&sort=updated".format(year)
+        # Request API
+        req = requests.get(api).json()
+        items = req["items"]
+
         return items
     except Exception as e:
         print("Network request error occurred", e)
@@ -171,14 +141,14 @@ def main():
     # Monitoring function
     year = datetime.now().year
     sorted_list = []
-    for i in range(year, 2017, -1):
+    for i in range(year, 2015, -1):
         item = get_info(i)
         if item is None or len(item) == 0:
             continue
-        print(f"Year {i}, Retrieved raw data: {len(item)} entries")
+        print("Year {}, Retrieved raw data: {} entries".format(i, len(item)))
         sorted = db_match(item)
         if len(sorted) != 0:
-            print(f"Year {i}, Updated {len(sorted)} entries")
+            print("Year {}, Updated {} entries".format(i, len(sorted)))
             sorted_list.extend(sorted)
         count = random.randint(3, 15)
         time.sleep(count)
