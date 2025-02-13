@@ -1,0 +1,4 @@
+requests
+peewee
+mkdocs
+mkdocs-material
