@@ -1,0 +1,6 @@
+app.py        -> This file takes the sqlite database and converts it into dispaylable cve_data.html
+check.py      -> Upon every commit this file outputs the commit number
+cve_data.html -> frontend ui
+cve.sqlite    -> database that gets updated upon running main.py
+main.py       -> actual code that searchs for new cves and adds to sqlite database
+

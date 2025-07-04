@@ -1,18 +1,24 @@
 import requests
 from peewee import *
 from datetime import datetime
-import time
-import random
-import math
 import git
 import os
+import html  # For escaping HTML content
 
-# GitHub repository details (adjust these based on your setup)
-GITHUB_REPO_PATH = '/home/kali/Desktop/cve_monitor/1/cve_monitor'  # Replace with the path to your local Git repo
-GITHUB_BRANCH = 'main'  # Change if you're using a different branch
+# GitHub repository details
+GITHUB_REPO_PATH = '/home/alex/cve_monitor'
+GITHUB_BRANCH = 'main'
 
+# Fetch GitHub credentials from environment variables
+GITHUB_USERNAME = os.getenv("GITHUB_USERNAME")
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+
+if not GITHUB_USERNAME or not GITHUB_TOKEN:
+    print("Error: GitHub credentials not set. Please configure environment variables.")
+    exit(1)
+
+# Database setup
 db = SqliteDatabase("cve.sqlite")
-
 
 class CVE_DB(Model):
     id = IntegerField()
@@ -24,65 +30,27 @@ class CVE_DB(Model):
     class Meta:
         database = db
 
-
 db.connect()
 
-
 def write_html(cve_data):
-    # Generate the HTML content with Bootstrap and a dark theme
+    """Generates the CVE HTML report."""
     html_content = """
     <html>
     <head>
         <title>CVE Data</title>
-        <!-- Bootstrap CSS -->
         <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
         <style>
-            body {
-                background-color: #121212;
-                color: #ffffff;
-                padding-top: 50px;
-            }
-            .container {
-                max-width: 90%;
-            }
-            .table {
-                background-color: #1e1e1e;
-                color: #ffffff;
-                border: 1px solid #444444;
-            }
-            th, td {
-                text-align: center;
-                vertical-align: middle;
-                padding: 12px 15px;
-                border: 1px solid #444444;
-            }
-            th {
-                background-color: #333333;
-            }
-            .table-striped tbody tr:nth-child(odd) {
-                background-color: #252525;
-            }
-            .btn {
-                background-color: #007bff;
-                color: white;
-                padding: 6px 12px;
-                font-size: 14px;
-            }
-            .btn:hover {
-                background-color: #0056b3;
-            }
-            .card {
-                background-color: #333333;
-                border: none;
-                color: #ffffff;
-            }
-            .card-header {
-                background-color: #444444;
-                color: #ffffff;
-            }
-            .card-body {
-                background-color: #1e1e1e;
-            }
+            body { background-color: #121212; color: #ffffff; padding-top: 50px; }
+            .container { max-width: 90%; }
+            .table { background-color: #1e1e1e; color: #ffffff; border: 1px solid #444444; }
+            th, td { text-align: center; vertical-align: middle; padding: 12px 15px; border: 1px solid #444444; }
+            th { background-color: #333333; }
+            .table-striped tbody tr:nth-child(odd) { background-color: #252525; }
+            .btn { background-color: #007bff; color: white; padding: 6px 12px; font-size: 14px; }
+            .btn:hover { background-color: #0056b3; }
+            .card { background-color: #333333; border: none; color: #ffffff; }
+            .card-header { background-color: #444444; color: #ffffff; }
+            .card-body { background-color: #1e1e1e; }
         </style>
     </head>
     <body>
@@ -107,16 +75,15 @@ def write_html(cve_data):
                                 </thead>
                                 <tbody>
     """
-    
-    # Add rows to the table for each CVE
+
     for entry in cve_data:
         html_content += f"""
             <tr>
-                <td>{entry['id']}</td>
-                <td>{entry['full_name']}</td>
-                <td>{entry['description']}</td>
-                <td><a href="{entry['url']}" class="btn btn-primary btn-sm" target="_blank">Link</a></td>
-                <td>{entry['created_at']}</td>
+                <td>{html.escape(str(entry['id']))}</td>
+                <td>{html.escape(entry['full_name'])}</td>
+                <td>{html.escape(entry['description'])}</td>
+                <td><a href="{html.escape(entry['url'])}" class="btn btn-primary btn-sm" target="_blank">Link</a></td>
+                <td>{html.escape(entry['created_at'])}</td>
             </tr>
         """
 
@@ -128,7 +95,6 @@ def write_html(cve_data):
                 </div>
             </div>
         </div>
-        <!-- Bootstrap JS and dependencies -->
         <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
         <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
@@ -136,15 +102,13 @@ def write_html(cve_data):
     </html>
     """
 
-    # Write the HTML to a file
     with open("cve_data.html", "w") as f:
         f.write(html_content)
 
-
 def fetch_cve_data():
-    # Fetch data from the SQLite database
+    """Fetches CVE data from the SQLite database."""
     cve_data = []
-    query = CVE_DB.select()
+    query = CVE_DB.select().order_by(CVE_DB.created_at.desc())
 
     for entry in query:
         cve_data.append({
@@ -157,30 +121,23 @@ def fetch_cve_data():
 
     return cve_data
 
-
 def push_to_github():
-    # GitHub push logic
+    """Pushes the generated HTML file to GitHub using environment-based authentication."""
     try:
-        # Initialize the Git repo
         repo = git.Repo(GITHUB_REPO_PATH)
-        
-        # Add the changes to git
         repo.git.add('cve_data.html')
-        
-        # Commit the changes
         repo.index.commit('Update CVE data HTML file')
 
-        # Push the changes to GitHub
         origin = repo.remote(name='origin')
+        origin.set_url(f"https://{GITHUB_USERNAME}:{GITHUB_TOKEN}@github.com/{GITHUB_USERNAME}/cve_monitor.git")
         origin.push()
 
         print("cve_data.html pushed to GitHub successfully!")
     except Exception as e:
         print(f"Error occurred while pushing to GitHub: {e}")
 
-
 def main():
-    # Fetch data from database and write it to HTML
+    """Main function to fetch CVE data, generate HTML, and push to GitHub."""
     cve_data = fetch_cve_data()
     if cve_data:
         write_html(cve_data)
@@ -188,7 +145,6 @@ def main():
         push_to_github()
     else:
         print("No CVE data found in the database.")
-
 
 if __name__ == "__main__":
     main()
